@@ -14,6 +14,9 @@ from to_bd import *
 import io
 
 
+conn = 'postgresql://postgres:1712@localhost/rosatom'
+
+
 app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
@@ -60,12 +63,17 @@ async def upload_excel(file: UploadFile = File(...)):
         raise HTTPException(status_code=400, detail=f"Ошибка обработки файла: {str(e)}")
 
 
-@app.get("/download_file_requests/")
+@app.get("/download_file_example/")
 async def root():
-    filename = "shablon.xlsx"
-    return FileResponse(filename, media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-                        filename=filename)
+    return FileResponse('shablon.xlsx', media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        filename='shablon.xlsx')
 
+@app.get("/download_file_req/")
+async def root_d():
+    df = pd.read_sql_table(table_name='schedule', con=conn)
+    df.to_excel('timesheet.xlsx')
+    return FileResponse('timesheet.xlsx', media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                        filename='timesheet.xlsx')
 
 @app.get("/map_info/")
 async def root(ship_name : str, db: Session = Depends(get_db)):
@@ -88,6 +96,27 @@ async def get_items(ship_name : str, db: Session = Depends(get_db)):
 @app.get("/list_ships/")
 async def get_items(db: Session = Depends(get_db)):
     return db.query(Schedule).all()
+
+
+@app.get("/all/")
+async def get_items(db: Session = Depends(get_db)):
+    res = db.query(Schedule).all()
+    ans = []
+    for r in res:
+        name = str(r.ship_name)
+        temp = db.query(ProvodkiAlgosReal).filter(ProvodkiAlgosReal.name == name).all()
+        t1 = []
+        for t in temp:
+            print(t)
+            t1.append(t)
+        print(temp)
+        ans.append({
+            'info' : r,
+            "rout" : t1
+        })
+
+    return ans
+
 
 @app.post("/new_request/")
 async def create_emergency(sh: ScheduleItem, db: Session = Depends(get_db)):
@@ -117,6 +146,7 @@ async def root():
         'Таймыр' :f"{df.iloc[0]['Таймыр']}" ,
         'Вайгач' :f"{df.iloc[0]['Вайгач']}"
     }
+
 
 @app.delete("/")
 async def kill():

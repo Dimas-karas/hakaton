@@ -49,7 +49,11 @@ def tel_bot():
 
         if message.text == "получить список заявок":
             await message.answer("выгрузка заявок в формате Excel")
-            await message.answer("Список заявок по вашему запросу")
+            with open('timesheet.xlsx', 'rb') as file:
+                await bot.send_document(
+                    chat_id=message.chat.id,
+                    document=types.InputFile(file)
+                )
             user_answers[current_question_index] = message.text
             user_data[user_id] = user_answers
         else:
